@@ -60,7 +60,7 @@ elif menu == "Wealth & Zakat":
         data["Year"] = data["Date"].dt.year
 
         # Calculate cumulative weight and zakat payable for each year
-        yearly_weight = data.groupby("Year")["Weight (grams)"].sum().cumsum().reset_index()
+        yearly_weight = data.groupby("Year")[["Weight (grams)"]].sum().cumsum().reset_index()
         yearly_weight.rename(columns={"Weight (grams)": "Cumulative Weight (grams)"}, inplace=True)
 
         # Load zakat rates
@@ -72,11 +72,7 @@ elif menu == "Wealth & Zakat":
             axis=1
         )
 
-        # Display cumulative weight and zakat summary
-        st.subheader("Yearly Zakat Summary")
-        st.dataframe(zakat_summary[["Year", "Cumulative Weight (grams)", "Zakat Payable"]])
-
-        # Allow updating zakat payment status
+        # Manage payment status
         zakat_status_file = "data/zakat_status.csv"
         if not os.path.exists(zakat_status_file):
             zakat_summary["Paid"] = "Not Paid Yet"
@@ -85,13 +81,14 @@ elif menu == "Wealth & Zakat":
             zakat_status = pd.read_csv(zakat_status_file)
             zakat_summary = zakat_summary.merge(zakat_status[["Year", "Paid"]], on="Year", how="left")
 
+        # Display all data in a table view
+        st.subheader("Yearly Zakat Summary")
+        st.write("Below is a comprehensive summary of cumulative weight, zakat payable, and payment status for each year:")
+        st.dataframe(zakat_summary[["Year", "Cumulative Weight (grams)", "Gold Price (RM/gram)", "Zakat Rate (%)", "Zakat Payable", "Paid"]])
+
+        # Update payment status
         st.write("### Update Zakat Payment Status")
         for _, row in zakat_summary.iterrows():
-            st.write(f"**Year:** {row['Year']}")
-            st.write(f"- Cumulative Weight: {row['Cumulative Weight (grams)']:.2f} grams")
-            st.write(f"- Zakat Payable: RM {row['Zakat Payable']:.2f}")
-            st.write(f"- Status: {row['Paid']}")
-
             new_status = st.radio(
                 f"Update Status for {row['Year']}",
                 options=["Paid", "Not Paid Yet"],
