@@ -8,15 +8,24 @@ from utils.calculations import calculate_wealth, calculate_zakat, calculate_year
 data_file = "data/jewelry_records.csv"
 zakat_rates_file = "data/zakat_rates.csv"
 
+# App version and GitHub link
+APP_VERSION = "v1.0.0"
+GITHUB_LINK = "https://github.com/mairfanj/gold-wallet/"
+
 # Load data
 data = load_data(data_file)
 
 # Sidebar Menu
 menu = st.sidebar.selectbox("Menu", ["Home", "Add Record", "View Records", "Wealth & Zakat", "Manage Zakat Rates", "Edit Item"])
 
+st.sidebar.markdown(f"**Version:** {APP_VERSION}")
+st.sidebar.markdown(f"[GitHub Repository]({GITHUB_LINK})")
+
 if menu == "Home":
     st.title("Gold Wallet")
     st.write("Track your gold transactions, calculate wealth, and determine zakat.")
+    st.markdown(f"**Version:** {APP_VERSION}")
+    st.markdown(f"[GitHub Repository]({GITHUB_LINK})")
 
 elif menu == "Add Record":
     st.header("Add a New Jewelry Record")
@@ -81,10 +90,14 @@ elif menu == "Wealth & Zakat":
             zakat_status = pd.read_csv(zakat_status_file)
             zakat_summary = zakat_summary.merge(zakat_status[["Year", "Paid"]], on="Year", how="left")
 
+        # Adjust index to start from 1 for display
+        zakat_summary_display = zakat_summary.copy()
+        zakat_summary_display.index = zakat_summary_display.index + 1
+
         # Display all data in a table view
         st.subheader("Yearly Zakat Summary")
         st.write("Below is a comprehensive summary of cumulative weight, zakat payable, and payment status for each year:")
-        st.dataframe(zakat_summary[["Year", "Cumulative Weight (grams)", "Gold Price (RM/gram)", "Zakat Rate (%)", "Zakat Payable", "Paid"]])
+        st.dataframe(zakat_summary_display[["Year", "Cumulative Weight (grams)", "Gold Price (RM/gram)", "Zakat Rate (%)", "Zakat Payable", "Paid"]])
 
         # Update payment status
         st.write("### Update Zakat Payment Status")
@@ -121,12 +134,16 @@ elif menu == "Manage Zakat Rates":
     except FileNotFoundError:
         zakat_rates = pd.DataFrame(columns=["Year", "Gold Price (RM/gram)", "Zakat Rate (%)"])
 
+    # Display current rates
     st.write("Current Zakat Rates:")
     if not zakat_rates.empty:
-        st.dataframe(zakat_rates)
+        zakat_rates_display = zakat_rates.copy()
+        zakat_rates_display.index = zakat_rates_display.index + 1  # Start numbering from 1
+        st.dataframe(zakat_rates_display)
     else:
         st.write("No Zakat rates found. Please add rates for each year.")
 
+    # Form to add/update Zakat rate
     with st.form("add_zakat_rate_form"):
         year = st.number_input("Year", min_value=2000, max_value=2100, step=1)
         gold_price = st.number_input("Gold Price (RM/gram)", min_value=0.0, step=0.1)
