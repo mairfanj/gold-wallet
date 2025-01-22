@@ -4,8 +4,6 @@ import os  # Add this import
 from utils.file_handler import load_data, save_data
 from utils.calculations import calculate_wealth, calculate_zakat, calculate_yearly_zakat
 
-
-
 # File paths
 data_file = "data/jewelry_records.csv"
 zakat_rates_file = "data/zakat_rates.csv"
@@ -48,9 +46,13 @@ elif menu == "Add Record":
 elif menu == "View Records":
     st.header("View All Records")
     if data is not None and not data.empty:
-        st.dataframe(data)
+        # Reset index to start row numbering from 1
+        data_display = data.copy()
+        data_display.index = data_display.index + 1
+        st.dataframe(data_display)
     else:
         st.write("No records found. Please add some records first.")
+
 
 elif menu == "Wealth & Zakat":
     st.header("Wealth & Zakat Calculation")
