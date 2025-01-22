@@ -1,7 +1,10 @@
 import streamlit as st
 import pandas as pd
+import os  # Add this import
 from utils.file_handler import load_data, save_data
 from utils.calculations import calculate_wealth, calculate_zakat, calculate_yearly_zakat
+
+
 
 # File paths
 data_file = "data/jewelry_records.csv"
