@@ -1,5 +1,6 @@
-Year,Zakat Amount,Paid
-2020,0.0,Not Paid Yet
-2021,0.0,Not Paid Yet
-2022,0.0,Not Paid Yet
-2023,912.0,Not Paid Yet
+Year,Cumulative Weight (grams),Gold Price (RM/gram),Zakat Rate (%),Zakat Payable,Paid
+2020,15.08,230,2.5,0.0,Not Paid Yet
+2021,60.84,250,2.5,0.0,Not Paid Yet
+2022,88.17,270,2.5,595.1475,Not Paid Yet
+2023,209.76999999999998,300,2.5,1573.2749999999996,Not Paid Yet
+2024,407.65999999999997,320,2.5,3261.2799999999993,Not Paid Yet

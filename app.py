@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import os  # Add this import
+import os
 from utils.file_handler import load_data, save_data
 from utils.calculations import calculate_wealth, calculate_zakat, calculate_yearly_zakat
 
@@ -46,23 +46,37 @@ elif menu == "Add Record":
 elif menu == "View Records":
     st.header("View All Records")
     if data is not None and not data.empty:
-        # Reset index to start row numbering from 1
         data_display = data.copy()
         data_display.index = data_display.index + 1
         st.dataframe(data_display)
     else:
         st.write("No records found. Please add some records first.")
 
-
 elif menu == "Wealth & Zakat":
     st.header("Wealth & Zakat Calculation")
-    
-    # Load jewelry data and zakat rates
+
     if data is not None and not data.empty:
-        total_wealth = calculate_wealth(data)
-        zakat_summary = calculate_yearly_zakat(data, zakat_rates_file)
-        
-        # Load or create Zakat status file
+        data["Date"] = pd.to_datetime(data["Date"])
+        data["Year"] = data["Date"].dt.year
+
+        # Calculate cumulative weight and zakat payable for each year
+        yearly_weight = data.groupby("Year")["Weight (grams)"].sum().cumsum().reset_index()
+        yearly_weight.rename(columns={"Weight (grams)": "Cumulative Weight (grams)"}, inplace=True)
+
+        # Load zakat rates
+        zakat_rates = pd.read_csv(zakat_rates_file)
+        zakat_summary = yearly_weight.merge(zakat_rates, on="Year", how="left")
+        zakat_summary["Zakat Payable"] = zakat_summary.apply(
+            lambda row: row["Cumulative Weight (grams)"] * row["Gold Price (RM/gram)"] * row["Zakat Rate (%)"] / 100
+            if row["Cumulative Weight (grams)"] >= 85 else 0,
+            axis=1
+        )
+
+        # Display cumulative weight and zakat summary
+        st.subheader("Yearly Zakat Summary")
+        st.dataframe(zakat_summary[["Year", "Cumulative Weight (grams)", "Zakat Payable"]])
+
+        # Allow updating zakat payment status
         zakat_status_file = "data/zakat_status.csv"
         if not os.path.exists(zakat_status_file):
             zakat_summary["Paid"] = "Not Paid Yet"
@@ -70,36 +84,36 @@ elif menu == "Wealth & Zakat":
         else:
             zakat_status = pd.read_csv(zakat_status_file)
             zakat_summary = zakat_summary.merge(zakat_status[["Year", "Paid"]], on="Year", how="left")
-        
-        # Display Zakat summary
-        st.write("### Zakat Payable by Year")
+
+        st.write("### Update Zakat Payment Status")
         for _, row in zakat_summary.iterrows():
             st.write(f"**Year:** {row['Year']}")
-            st.write(f"- Zakat Payable: RM {row['Zakat Amount']:.2f}")
+            st.write(f"- Cumulative Weight: {row['Cumulative Weight (grams)']:.2f} grams")
+            st.write(f"- Zakat Payable: RM {row['Zakat Payable']:.2f}")
             st.write(f"- Status: {row['Paid']}")
-            
-            # Allow updating payment status
+
             new_status = st.radio(
                 f"Update Status for {row['Year']}",
                 options=["Paid", "Not Paid Yet"],
                 index=0 if row["Paid"] == "Paid" else 1,
                 key=row["Year"]
             )
-            
-            # Update status
+
             if new_status != row["Paid"]:
                 zakat_summary.loc[zakat_summary["Year"] == row["Year"], "Paid"] = new_status
                 zakat_summary.to_csv(zakat_status_file, index=False)
                 st.success(f"Updated Zakat status for {row['Year']} to {new_status}.")
-        
-        # Update wealth based on Zakat payment status
-        total_paid_zakat = zakat_summary.loc[zakat_summary["Paid"] == "Paid", "Zakat Amount"].sum()
+
+        # Display wealth summary
+        total_wealth = calculate_wealth(data)
+        total_paid_zakat = zakat_summary.loc[zakat_summary["Paid"] == "Paid", "Zakat Payable"].sum()
         updated_wealth = total_wealth - total_paid_zakat
-        
+
         st.write("### Wealth Summary")
         st.write(f"**Total Wealth Before Zakat:** RM {total_wealth:.2f}")
         st.write(f"**Total Zakat Paid:** RM {total_paid_zakat:.2f}")
         st.write(f"**Updated Wealth After Zakat:** RM {updated_wealth:.2f}")
+
     else:
         st.write("No data available to calculate wealth or zakat.")
 
@@ -110,14 +124,12 @@ elif menu == "Manage Zakat Rates":
     except FileNotFoundError:
         zakat_rates = pd.DataFrame(columns=["Year", "Gold Price (RM/gram)", "Zakat Rate (%)"])
 
-    # Display current rates
     st.write("Current Zakat Rates:")
     if not zakat_rates.empty:
         st.dataframe(zakat_rates)
     else:
         st.write("No Zakat rates found. Please add rates for each year.")
 
-    # Form to add/update Zakat rate
     with st.form("add_zakat_rate_form"):
         year = st.number_input("Year", min_value=2000, max_value=2100, step=1)
         gold_price = st.number_input("Gold Price (RM/gram)", min_value=0.0, step=0.1)
